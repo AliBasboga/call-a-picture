@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pexels Image Search</title>
+    
+</head>
+<body>
+
+    <h1>Image Search App</h1>
+
+    <!-- Input ve Button -->
+    <input type="text" id="searchQuery" placeholder="Enter search term">
+    <button id="searchButton">Search</button>
+
+    <!-- Fotoğrafların Gösterileceği Konteyner -->
+    <div id="imageContainer"></div>
+
+
+    <script>
+       const apiKey = 'bfqMH9owHLJ3HCUY6MYMWobFkFCg9OVAk0xltuo1e2awcWJKIylnwsZH'; // Pexels API key
+const imageContainer = document.getElementById('imageContainer');
+const searchButton = document.getElementById('searchButton');
+const searchQueryInput = document.getElementById('searchQuery');
+
+async function fetchImages(query) {
+    try {
+        const proxyUrl = 'https://cors-anywhere.herokuapp.com/';  // Proxy URL
+        const apiUrl = `https://api.pexels.com/v1/search?query=${query}&per_page=10`;
+
+        const response = await fetch(proxyUrl + apiUrl, {
+            headers: {
+                'Authorization': apiKey
+            }
+        });
+
+        // Yanıtı kontrol et
+        const data = await response.json();
+        console.log(data);  // API yanıtını konsola yazdır
+
+        if (!data.photos) {
+            console.error('No photos found in the API response');
+            return;
+        }
+
+        const images = data.photos;
+
+        // Clear previous images
+        imageContainer.innerHTML = '';
+
+        // Display new images
+        images.forEach(image => {
+            const imgElement = document.createElement('img');
+            imgElement.src = image.src.medium;
+            imgElement.alt = image.alt;
+            imgElement.style.margin = '10px';
+            imgElement.style.maxWidth = '200px'; // Max width for images
+            imageContainer.appendChild(imgElement);
+        });
+    } catch (error) {
+        console.error('Error fetching images:', error);
+    }
+}
+
+        
+
+// Butona tıklanınca arama yap
+searchButton.addEventListener('click', () => {
+    const query = searchQueryInput.value.trim(); // Input değerini al
+    if (query) {
+        fetchImages(query);  // Arama yap
+    } else {
+        alert('Please enter a search term.');
+    }
+});
+
+
+    </script>
+
+</body>
+</html>
