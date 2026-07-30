@@ -1,82 +1,122 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pexels Image Search</title>
-    
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Call a Picture — Görsel Arama</title>
+  <style>
+    :root{font-family:Inter, Roboto, sans-serif;color:#222}
+    body{padding:24px;max-width:1100px;margin:0 auto;background:#f7f7fb}
+    h1{font-size:24px;margin-bottom:8px}
+    .controls{display:flex;gap:8px;align-items:center;margin-bottom:16px}
+    input[type=text]{padding:10px;border-radius:6px;border:1px solid #ccc;min-width:280px}
+    button{padding:10px 12px;border-radius:6px;border:0;background:#0066ff;color:#fff;cursor:pointer}
+    button.secondary{background:#6b7280}
+    #imageContainer{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+    #imageContainer img{width:100%;height:140px;object-fit:cover;border-radius:8px;box-shadow:0 6px 18px rgba(10,10,20,0.06);opacity:0;transform:translateY(8px);animation:fadeInUp .45s forwards}
+    @keyframes fadeInUp{to{opacity:1;transform:none}}
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;padding:24px;visibility:hidden;opacity:0;transition:opacity .18s,visibility .18s}
+    .modal.open{visibility:visible;opacity:1}
+    .modal img{max-width:100%;max-height:90vh;border-radius:8px}
+    .note{font-size:13px;color:#444;margin-bottom:12px}
+  </style>
 </head>
 <body>
+  <h1>Call a Picture</h1>
+  <p class="note">API anahtarınız yoksa "Demo" ile örnek görüntüler görebilirsiniz. Üretimde API anahtarınızı gizli tutun.</p>
 
-    <h1>Image Search App</h1>
-
-    <!-- Input ve Button -->
-    <input type="text" id="searchQuery" placeholder="Enter search term">
+  <div class="controls">
+    <input id="searchQuery" type="text" placeholder="Arama terimi girin (ör. mountains)" />
     <button id="searchButton">Search</button>
+    <button id="demoButton" class="secondary">Demo</button>
+  </div>
 
-    <!-- Fotoğrafların Gösterileceği Konteyner -->
-    <div id="imageContainer"></div>
+  <div id="imageContainer" aria-live="polite"></div>
 
+  <div id="modal" class="modal" role="dialog" aria-modal="true">
+    <img id="modalImg" src="" alt="Full view" />
+  </div>
 
-    <script>
-       const apiKey = 'bfqMH9owHLJ3HCUY6MYMWobFkFCg9OVAk0xltuo1e2awcWJKIylnwsZH'; // Pexels API key
-const imageContainer = document.getElementById('imageContainer');
-const searchButton = document.getElementById('searchButton');
-const searchQueryInput = document.getElementById('searchQuery');
+  <script>
+    // NOT: Depoda gömülü API anahtarı yok. Buraya kendi PEXELS API anahtarınızı koyun veya backend endpoint kullanın.
+    const apiKey = '';
 
-async function fetchImages(query) {
-    try {
-        const proxyUrl = 'https://cors-anywhere.herokuapp.com/';  // Proxy URL
-        const apiUrl = `https://api.pexels.com/v1/search?query=${query}&per_page=10`;
+    const imageContainer = document.getElementById('imageContainer');
+    const searchButton = document.getElementById('searchButton');
+    const demoButton = document.getElementById('demoButton');
+    const searchQueryInput = document.getElementById('searchQuery');
+    const modal = document.getElementById('modal');
+    const modalImg = document.getElementById('modalImg');
 
-        const response = await fetch(proxyUrl + apiUrl, {
-            headers: {
-                'Authorization': apiKey
-            }
-        });
+    // Helper: add images to DOM
+    function showImages(urls) {
+      imageContainer.innerHTML = '';
+      urls.forEach((u, i) => {
+        const img = document.createElement('img');
+        img.src = u;
+        img.loading = 'lazy';
+        img.alt = `Photo ${i+1}`;
+        img.addEventListener('click', () => openModal(u));
+        imageContainer.appendChild(img);
+      });
+    }
 
-        // Yanıtı kontrol et
-        const data = await response.json();
-        console.log(data);  // API yanıtını konsola yazdır
+    function openModal(src){
+      modalImg.src = src;
+      modal.classList.add('open');
+    }
+    modal.addEventListener('click', () => modal.classList.remove('open'));
 
-        if (!data.photos) {
-            console.error('No photos found in the API response');
-            return;
+    async function fetchImagesFromPexels(query){
+      try{
+        if(!apiKey){
+          throw new Error('No API key provided');
         }
-
-        const images = data.photos;
-
-        // Clear previous images
-        imageContainer.innerHTML = '';
-
-        // Display new images
-        images.forEach(image => {
-            const imgElement = document.createElement('img');
-            imgElement.src = image.src.medium;
-            imgElement.alt = image.alt;
-            imgElement.style.margin = '10px';
-            imgElement.style.maxWidth = '200px'; // Max width for images
-            imageContainer.appendChild(imgElement);
+        // If you need a CORS proxy, replace proxyUrl or implement server-side proxy.
+        const proxyUrl = '';
+        const apiUrl = `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=12`;
+        const response = await fetch((proxyUrl || '') + apiUrl, {
+          headers: { 'Authorization': apiKey }
         });
-    } catch (error) {
-        console.error('Error fetching images:', error);
+        if(!response.ok){
+          const text = await response.text();
+          throw new Error('Pexels API error: ' + response.status + ' ' + text);
+        }
+        const data = await response.json();
+        if(!data.photos) throw new Error('No photos in response');
+        const urls = data.photos.map(p => p.src.medium);
+        showImages(urls);
+      }catch(err){
+        console.error(err);
+        alert('Pexels isteği başarısız oldu: ' + err.message + '\nDemo modunu deneyin.');
+      }
     }
-}
 
-        
-
-// Butona tıklanınca arama yap
-searchButton.addEventListener('click', () => {
-    const query = searchQueryInput.value.trim(); // Input değerini al
-    if (query) {
-        fetchImages(query);  // Arama yap
-    } else {
-        alert('Please enter a search term.');
+    // Demo: use picsum.photos seeded images
+    function loadDemoImages(query){
+      const seed = query ? encodeURIComponent(query) : 'demo';
+      const urls = Array.from({length:12}, (_,i) => `https://picsum.photos/seed/${seed}-${i}/800/600`);
+      showImages(urls);
     }
-});
 
+    searchButton.addEventListener('click', () => {
+      const q = searchQueryInput.value.trim();
+      if(!q) return alert('Lütfen bir arama terimi girin.');
+      if(apiKey){
+        fetchImagesFromPexels(q);
+      }else{
+        // no api key -> demo mode
+        loadDemoImages(q);
+      }
+    });
 
-    </script>
+    demoButton.addEventListener('click', () => {
+      searchQueryInput.value = 'demo';
+      loadDemoImages('demo');
+    });
 
+    // On load, show a few demo images
+    loadDemoImages('welcome');
+  </script>
 </body>
 </html>
